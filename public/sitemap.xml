@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<url><loc>https://training.example/</loc></url>
+<url><loc>https://training.example/compliance</loc></url>
+<url><loc>https://training.example/guides/buy-the-right-work</loc></url>
+<url><loc>https://training.example/guides/review-architectural-applications</loc></url>
+<url><loc>https://training.example/guides/do-and-association-insurance</loc></url>
+<url><loc>https://training.example/guides/enforce-with-a-fair-process</loc></url>
+<url><loc>https://training.example/guides/prepare-the-property-before-the-storm</loc></url>
+<url><loc>https://training.example/guides/recognize-a-request-for-accommodation</loc></url>
+<url><loc>https://training.example/guides/keep-records-people-can-find</loc></url>
+<url><loc>https://training.example/guides/run-a-clear-open-meeting</loc></url>
+<url><loc>https://training.example/guides/prepare-for-the-annual-meeting</loc></url>
+<url><loc>https://training.example/guides/know-who-does-what</loc></url>
+<url><loc>https://training.example/guides/read-the-budget-before-the-vote</loc></url>
+<url><loc>https://training.example/guides/plan-ahead-and-collect-fairly</loc></url>
+  <url><loc>https://training.example/course-plan</loc></url>
+<url><loc>https://training.example/self-paced</loc></url>
+<url><loc>https://training.example/self-paced/know-who-does-what</loc></url>
+<url><loc>https://training.example/self-paced/read-the-budget-before-the-vote</loc></url>
+<url><loc>https://training.example/self-paced/keep-records-people-can-find</loc></url>
+<url><loc>https://training.example/self-paced/enforce-with-a-fair-process</loc></url>
+<url><loc>https://training.example/self-paced/run-a-clear-open-meeting</loc></url>
+<url><loc>https://training.example/self-paced/prepare-for-the-annual-meeting</loc></url>
+<url><loc>https://training.example/self-paced/plan-ahead-and-collect-fairly</loc></url>
+<url><loc>https://training.example/self-paced/buy-the-right-work</loc></url>
+<url><loc>https://training.example/self-paced/review-architectural-applications</loc></url>
+<url><loc>https://training.example/self-paced/do-and-association-insurance</loc></url>
+<url><loc>https://training.example/self-paced/prepare-the-property-before-the-storm</loc></url>
+<url><loc>https://training.example/self-paced/recognize-a-request-for-accommodation</loc></url>
+</urlset>

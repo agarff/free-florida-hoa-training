@@ -1,0 +1,6 @@
+# License notices
+
+- **Original website code** is available under the MIT License in `LICENSE-MIT.txt`. Retain the copyright and permission notice with copies or substantial portions.
+- **Original course text** in the app and readable exports is available under Creative Commons Attribution 4.0 International. See `LICENSE-CC-BY-4.0.txt` or https://creativecommons.org/licenses/by/4.0/. Credit Free Florida HOA Training, link to the license, and indicate changes. For example, “Adapted from Free Florida HOA Training, licensed CC BY 4.0. Changes were made.”
+- **Third-party material** keeps its own terms. This archive contains references and embed metadata, not copies of the videos or external materials. No license is granted here over embedded videos, material authored by others, linked legal resources, or third-party names and marks. The package lockfile identifies dependencies. Preserve their notices when redistributing them. The interface uses Lucide icons and references the DM Sans and Lora fonts, which retain their upstream terms. See https://lucide.dev/license and the Google Fonts entries for https://fonts.google.com/specimen/DM+Sans and https://fonts.google.com/specimen/Lora.
+- The brand name identifies the original educational project for attribution. Reuse does not imply endorsement or state approval.
