@@ -5,7 +5,7 @@ export function ContributionLayout({ children }: { children: React.ReactNode }) 
   return <>
     <div className="pilot beta-warning" role="note">
       <strong>NOT CURRENTLY APPROVED — BETA TESTING ONLY</strong>
-      <span className="pilot-detail">No certification or CE credit awarded.</span>
+      <span className="pilot-detail">Application submitted and awaiting DBPR approval. No certification or CE credit awarded.</span>
     </div>
     <header>
       <SiteBrand />
