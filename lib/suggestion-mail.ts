@@ -1,6 +1,7 @@
 import { env, waitUntil } from 'cloudflare:workers';
 import { isContributionId } from './contribution-input';
 import { contributionLessons } from './contribution-policy';
+import { pullMode } from './suggestion-pull-queue';
 import { requestSuggestionMail } from './suggestion-mail-transport';
 
 const retryWindowMs = 23 * 60 * 60 * 1000; // Shorter than the provider's 24-hour deduplication window.
@@ -12,7 +13,7 @@ function mailConfig() {
   const from = env.SUGGESTION_MAIL_FROM?.trim();
   const key = env.SUGGESTION_RESEND_API_KEY?.trim();
   const domain = env.SUGGESTION_MAIL_ORIGIN?.trim();
-  if (env.SUGGESTION_MAIL_ENABLED !== 'true' || !to || !address.test(to) ||
+  if (pullMode() || env.SUGGESTION_MAIL_ENABLED !== 'true' || !to || !address.test(to) ||
       to !== env.INSTRUCTOR_EMAIL?.trim().toLowerCase() || !from || !address.test(from) || !key || !domain) return;
   try {
     const url = new URL(domain);
@@ -43,6 +44,8 @@ export async function persistSuggestion(suggestion: NewSuggestion, submissionKey
       INSERT INTO course_suggestion_mail (suggestion_id, submission_key, synthetic)
       SELECT id, ?, ? FROM course_suggestions WHERE id = ?
     `).bind(submissionKey, Number(synthetic), id),
+    ...(pullMode() ? [db.prepare(`INSERT INTO course_suggestion_pull_outbox (suggestion_id)
+      SELECT id FROM course_suggestions WHERE id = ?`).bind(id)] : []),
   ]);
   if (inserted.meta.changes === 1 && mailConfig()) {
     const task = deliverSuggestionMail(id).catch(() => console.error('Suggestion mail could not update its delivery record.'));
@@ -122,7 +125,9 @@ export async function deliverSuggestionMail(id: string): Promise<{ status: 'sent
   const { results } = await db.prepare(`
     SELECT m.*, s.id, s.lesson_id, s.edition, s.track, s.created_at
     FROM course_suggestion_mail m JOIN course_suggestions s ON s.id = m.suggestion_id
-    WHERE m.suggestion_id = ?
+    WHERE m.suggestion_id = ? AND NOT EXISTS (
+      SELECT 1 FROM course_suggestion_pull_outbox p WHERE p.suggestion_id = m.suggestion_id
+    )
   `).bind(id).all<MailContext>();
   const row = results[0];
   if (!row) return { status: 'missing', message: 'There is no notification for this suggestion.' };
