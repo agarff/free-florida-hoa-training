@@ -136,3 +136,27 @@ export function NotificationAction({ suggestionId }: { suggestionId?: string }) 
     {error && <p role="alert">{error}</p>}
   </>;
 }
+
+export function PullReconciliation({ suggestionId }: { suggestionId: string }) {
+  const [resolution, setResolution] = useState('accepted');
+  const { send, sending, error } = useModeration();
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const fields = new FormData(event.currentTarget);
+    void send(suggestionId, 0, 'reconcile-pull-mail', {
+      resolution, messageId: String(fields.get('messageId') ?? ''),
+    });
+  }
+  return <form className="contribution-form" onSubmit={submit}>
+    <p>Check provider activity for the original attempt. An uncertain notification cannot be sent again from this queue.</p>
+    <label>Reconciliation
+      <select value={resolution} onChange={event => setResolution(event.target.value)}>
+        <option value="accepted">Record verified provider acceptance</option>
+        <option value="closed">Close with acceptance unconfirmed</option>
+      </select>
+    </label>
+    {resolution === 'accepted' && <label>Provider message ID <input name="messageId" maxLength={256} required /></label>}
+    <button className="primary" disabled={sending}>Save reconciliation</button>
+    {error && <p role="alert">{error}</p>}
+  </form>;
+}
