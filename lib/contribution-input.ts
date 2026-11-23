@@ -24,14 +24,15 @@ export function contributionFailure(error: unknown) {
   return reply({ error: 'Contributions are temporarily unavailable. Please try again.' }, 503);
 }
 
-export async function jsonInput(request: Request): Promise<Record<string, unknown>> {
-  if (!sameOrigin(request) || request.headers.get('sec-fetch-site') === 'cross-site') {
+export async function jsonInput(request: Request, options?: { authenticatedService: true; maxBytes: number }): Promise<Record<string, unknown>> {
+  if (!options?.authenticatedService && (!sameOrigin(request) || request.headers.get('sec-fetch-site') === 'cross-site')) {
     throw new ContributionError(403, 'Submit this request from the training site.');
   }
   if (request.headers.get('content-type')?.split(';')[0].trim().toLowerCase() !== 'application/json') {
     throw new ContributionError(415, 'Submit using the site form.');
   }
-  if (Number(request.headers.get('content-length')) > maxRequestBytes) {
+  const byteLimit = options?.maxBytes ?? maxRequestBytes;
+  if (Number(request.headers.get('content-length')) > byteLimit) {
     throw new ContributionError(413, 'This submission is too long.');
   }
   const reader = request.body?.getReader();
@@ -43,7 +44,7 @@ export async function jsonInput(request: Request): Promise<Record<string, unknow
       const { value, done } = await reader.read();
       if (done) break;
       bytes += value.byteLength;
-      if (bytes > maxRequestBytes) {
+      if (bytes > byteLimit) {
         await reader.cancel();
         throw new ContributionError(413, 'This submission is too long.');
       }

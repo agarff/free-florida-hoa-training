@@ -103,3 +103,60 @@ export function CommentActions({ comment }: { comment: ReviewComment }) {
     {error && <p role="alert">{error}</p>}
   </>;
 }
+
+export function NotificationAction({ suggestionId }: { suggestionId?: string }) {
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+  async function send() {
+    setSending(true);
+    setError('');
+    try {
+      const response = await fetch('/api/contributions/moderate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(suggestionId ? { action: 'retry-email', id: suggestionId } : { action: 'test-email' }),
+      });
+      const data = await response.json() as { status?: string; testId?: string; error?: string; message?: string };
+      if (data.testId) {
+        window.location.assign('/suggestions/review?id=' + encodeURIComponent(data.testId));
+      } else if (response.ok || data.status === 'failed') {
+        window.location.reload();
+      } else {
+        throw new Error(data.error ?? data.message ?? 'The email request could not be completed.');
+      }
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'The email request could not be completed.');
+      setSending(false);
+    }
+  }
+  return <>
+    <button className="primary" type="button" disabled={sending} onClick={() => void send()}>
+      {sending ? 'Working…' : suggestionId ? 'Retry owner notification' : 'Queue synthetic test email'}
+    </button>
+    {error && <p role="alert">{error}</p>}
+  </>;
+}
+
+export function PullReconciliation({ suggestionId }: { suggestionId: string }) {
+  const [resolution, setResolution] = useState('accepted');
+  const { send, sending, error } = useModeration();
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const fields = new FormData(event.currentTarget);
+    void send(suggestionId, 0, 'reconcile-pull-mail', {
+      resolution, messageId: String(fields.get('messageId') ?? ''),
+    });
+  }
+  return <form className="contribution-form" onSubmit={submit}>
+    <p>Check provider activity for the original attempt. An uncertain notification cannot be sent again from this queue.</p>
+    <label>Reconciliation
+      <select value={resolution} onChange={event => setResolution(event.target.value)}>
+        <option value="accepted">Record verified provider acceptance</option>
+        <option value="closed">Close with acceptance unconfirmed</option>
+      </select>
+    </label>
+    {resolution === 'accepted' && <label>Provider message ID <input name="messageId" maxLength={256} required /></label>}
+    <button className="primary" disabled={sending}>Save reconciliation</button>
+    {error && <p role="alert">{error}</p>}
+  </form>;
+}

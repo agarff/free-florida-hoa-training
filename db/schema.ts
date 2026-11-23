@@ -69,3 +69,31 @@ export const contributionLimits = sqliteTable('course_contribution_limits', {
   clientKey: text('client_key').notNull(),
   hits: integer('hits').notNull(),
 }, t => [primaryKey({columns: [t.bucket, t.clientKey]})]);
+
+// One durable, private notification per newly inserted suggestion.
+export const suggestionMail = sqliteTable('course_suggestion_mail', {
+  suggestionId: text('suggestion_id').primaryKey().notNull().references(() => contributions.id),
+  submissionKey: text('submission_key').unique(),
+  synthetic: integer('synthetic').notNull().default(0),
+  status: text('status').notNull().default('pending'),
+  attempts: integer('attempts').notNull().default(0),
+  firstAttemptAt: integer('first_attempt_at'),
+  lastAttemptAt: integer('last_attempt_at'),
+  claimToken: text('claim_token'),
+  envelopeHash: text('envelope_hash'),
+  failure: text('failure'),
+  acceptedAt: integer('accepted_at'),
+  providerId: text('provider_id'),
+});
+
+export const suggestionPullOutbox = sqliteTable('course_suggestion_pull_outbox', {
+  suggestionId: text('suggestion_id').primaryKey().references(() => contributions.id),
+  status: text('status').notNull().default('pending'),
+  lease: text('lease'),
+  leaseUntil: integer('lease_until').notNull().default(0),
+  attempts: integer('attempts').notNull().default(0),
+  providerId: text('provider_id'),
+  acceptedAt: integer('accepted_at'),
+  reviewedAt: integer('reviewed_at'),
+  reviewedBy: text('reviewed_by'),
+}, t => [index('course_suggestion_pull_claim').on(t.status, t.leaseUntil)]);

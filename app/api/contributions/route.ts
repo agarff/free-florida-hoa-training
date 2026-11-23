@@ -1,5 +1,4 @@
-import { getDb } from '../../../db';
-import { contributions } from '../../../db/schema';
+import { persistSuggestion } from '../../../lib/suggestion-mail';
 import {
   contactEmail, contributionFailure, ContributionError, isContributionId, jsonInput,
   pageIndex, publicText, reply, supportingSource,
@@ -45,7 +44,10 @@ export async function POST(request: Request) {
       const source = supportingSource(input.source);
       const contact = contactEmail(input.contact);
       await rateLimit(request);
-      await getDb().insert(contributions).values({ id, lessonId, track, edition: currentEdition, issue, proposal, source, displayName, contact, createdAt });
+      const submissionKey = input.submissionKey;
+      if (submissionKey != null && !isContributionId(submissionKey)) throw new ContributionError(400, 'The submission key is invalid.');
+      await persistSuggestion({ id, lessonId, track, edition: currentEdition, issue, proposal, source, displayName, contact, createdAt },
+        typeof submissionKey === 'string' ? submissionKey.toLowerCase() : null);
     } else if (input.kind === 'comment' && isContributionId(input.suggestionId)) {
       const body = publicText(input.body, 'Comment', limits.body, 5);
       await rateLimit(request);

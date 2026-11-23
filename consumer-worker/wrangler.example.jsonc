@@ -1,0 +1,17 @@
+{
+  "name": "example-suggestion-mail-consumer",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-11-23",
+  "compatibility_flags": ["global_fetch_strictly_public"],
+  "vars": {
+    "SUGGESTION_MAIL_TRANSPORT": "cloudflare_pull",
+    "NOTIFY_FROM": "<FIXED_VERIFIED_SENDER>"
+  },
+  "send_email": [
+    {
+      "name": "NOTIFY_TEST_EMAIL",
+      "destination_address": "<ONLY_AUTHORIZED_OWNER_RECIPIENT>"
+    }
+  ],
+  "triggers": { "crons": ["*/5 * * * *"] }
+}

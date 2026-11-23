@@ -5,7 +5,10 @@ import { isInstructorUser } from '../../../lib/instructor';
 import { isContributionId, pageIndex } from '../../../lib/contribution-input';
 import { contributionLessons, statuses, type ContributionStatus, type ReviewSuggestion } from '../../../lib/contribution-policy';
 import { listReview, reviewThread } from '../../../lib/contribution-store';
-import { CommentActions, SuggestionActions } from './actions';
+import { learningReturn } from '../../../lib/login-return';
+import { suggestionMailEnabled, suggestionMailFailureMessage, suggestionMailStatus } from '../../../lib/suggestion-mail';
+import { pullMailStatus } from '../../../lib/suggestion-pull-queue';
+import { CommentActions, NotificationAction, PullReconciliation, SuggestionActions } from './actions';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Owner contribution review', robots: { index: false, follow: false } };
@@ -15,7 +18,10 @@ const root = '/suggestions/review';
 const lessonTitle = (id: string) => contributionLessons.find(lesson => lesson.id === id)?.title ?? id;
 
 async function Thread({ id, page, auditPage }: { id: string; page: number; auditPage: number }) {
-  const { suggestion, comments, audit } = await reviewThread(id, page, auditPage);
+  const [{ suggestion, comments, audit }, external] = await Promise.all([
+    reviewThread(id, page, auditPage), pullMailStatus(id),
+  ]);
+  const notification = external ? null : await suggestionMailStatus(id);
   return <>
     <a href={root}>Back to review queue</a>
     <h1>{lessonTitle(suggestion.lessonId)}</h1>
@@ -26,7 +32,7 @@ async function Thread({ id, page, auditPage }: { id: string; page: number; audit
       <p>Display name <strong>{suggestion.displayName || 'Anonymous'}</strong></p>
       <h2>Issue</h2><p className="contribution-text">{suggestion.issue}</p>
       <h2>Proposed wording</h2><p className="contribution-text">{suggestion.proposal}</p>
-      <p><a href={suggestion.source} target="_blank" rel="nofollow ugc noopener noreferrer">Read supporting source</a></p>
+      {suggestion.source && <p><a href={suggestion.source} target="_blank" rel="nofollow ugc noopener noreferrer">Read supporting source</a></p>}
       {suggestion.publishedAt && <p>Published in <code>{suggestion.publishedEdition}</code> · <ContributionDate date={suggestion.publishedAt} /></p>}
     </section>
     <section className="panel private-contact">
@@ -34,11 +40,30 @@ async function Thread({ id, page, auditPage }: { id: string; page: number; audit
       <p>Owner-only information. Keep it out of all public fields.</p>
       <p>{suggestion.contact || 'No contact email supplied.'}</p>
     </section>
-    <SuggestionActions suggestion={{
+    {external ? <section className="panel">
+      <h2>Cloudflare owner notification</h2>
+      <p><strong>{{ pending: 'Pending external processor', claimed: 'Claimed before sending',
+        send_started: 'Send authorized · awaiting receipt', uncertain: 'Needs review · acceptance unknown',
+        accepted: 'Provider accepted', closed: 'Closed by owner · acceptance unconfirmed' }[external.status]}</strong> · Send authorizations: {external.attempts}</p>
+      {external.providerId && <p>Provider reference <code>{external.providerId}</code>. Inbox delivery is unverified.</p>}
+      {external.status === 'uncertain' && <PullReconciliation suggestionId={id} />}
+    </section> : <section className="panel">
+      <h2>{notification?.synthetic ? 'Synthetic test notification' : 'Owner notification email'}</h2>
+      {!notification ? <p>This suggestion predates email tracking.</p> : <>
+        <p><strong>{notification.status === 'sent' ? 'Sent · Provider accepted' : notification.status === 'failed' ? 'Failed' : 'Pending'}</strong> · Attempts: {notification.attempts}</p>
+        {notification.acceptedAt && <p>Accepted <time dateTime={notification.acceptedAt}>{notification.acceptedAt}</time>. Inbox delivery is unverified.</p>}
+        {notification.providerId && <p>Provider reference <code>{notification.providerId}</code></p>}
+        {notification.failure && <p>{suggestionMailFailureMessage(notification.failure)}</p>}
+        {notification.status !== 'sent' && (notification.retryBlocked
+          ? <p>{notification.retryBlocked}</p>
+          : <NotificationAction suggestionId={id} />)}
+      </>}
+    </section>}
+    {!notification?.synthetic && <SuggestionActions suggestion={{
       id: suggestion.id, revision: suggestion.revision, status: suggestion.status as ContributionStatus,
       visible: suggestion.visible, approvedAt: suggestion.approvedAt, approvedText: suggestion.approvedText,
       edition: suggestion.edition, publicNote: suggestion.publicNote, proposal: suggestion.proposal,
-    }} />
+    }} />}
     <section>
       <h2>Discussion moderation</h2>
       {comments.items.length ? <ul className="contribution-list">{comments.items.map(comment => <li className="panel" key={comment.id}>
@@ -60,14 +85,14 @@ async function Thread({ id, page, auditPage }: { id: string; page: number; audit
 }
 
 export default async function ReviewPage({ searchParams }: { searchParams: Promise<Query> }) {
-  const user = await getChatGPTUser();
+  const [user, query] = await Promise.all([getChatGPTUser(), searchParams]);
+  const returnTo = isContributionId(query.id) ? learningReturn(root + '?id=' + query.id) : root;
   if (!isInstructorUser(user)) return <ContributionLayout>
     <h1>Owner access required</h1>
     {user ? <p>This account does not have access to the review queue.</p> :
-      <p><a href={'/login?returnTo=' + encodeURIComponent(root)}>Sign in to the owner account</a></p>}
+      <p><a href={'/login?returnTo=' + encodeURIComponent(returnTo)}>Sign in to the owner account</a></p>}
   </ContributionLayout>;
 
-  const query = await searchParams;
   const page = pageIndex(query.page ?? null);
   if (query.id !== undefined) {
     if (!isContributionId(query.id)) return <ContributionLayout><h1>Suggestion unavailable</h1><a href={root}>Back to review queue</a></ContributionLayout>;
@@ -85,6 +110,11 @@ export default async function ReviewPage({ searchParams }: { searchParams: Promi
   return <ContributionLayout>
     <h1>Contribution review queue</h1>
     <p>Review new and pending suggestions, then open a suggestion to moderate its discussion or record an approval.</p>
+    {suggestionMailEnabled() && <details className="panel">
+      <summary>Test owner email</summary>
+      <p>This queues one clearly labeled synthetic message to the configured owner address. Its review record stays private.</p>
+      <NotificationAction />
+    </details>}
     <form className="contribution-fields" action={root}>
       <label>Filter by status
         <select name="status" defaultValue={filter ?? ''}>

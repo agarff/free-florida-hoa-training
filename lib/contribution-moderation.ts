@@ -26,6 +26,10 @@ export async function moderate(input: Record<string, unknown>, actor: string) {
 
   const next = { ...row };
   const details: Record<string, unknown> = { priorStatus: row.status, baseEdition: row.edition };
+  const { results: notification } = await env.DB!.prepare('SELECT synthetic FROM course_suggestion_mail WHERE suggestion_id = ?')
+    .bind(id).all<{ synthetic: number }>();
+  if (notification[0]?.synthetic === 1) throw conflict('Synthetic tests always stay private.');
+
   if (action === 'show' || action === 'hide') {
     next.visible = Number(action === 'show');
     details.visible = next.visible === 1;
