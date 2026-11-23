@@ -85,3 +85,15 @@ export const suggestionMail = sqliteTable('course_suggestion_mail', {
   acceptedAt: integer('accepted_at'),
   providerId: text('provider_id'),
 });
+
+export const suggestionPullOutbox = sqliteTable('course_suggestion_pull_outbox', {
+  suggestionId: text('suggestion_id').primaryKey().references(() => contributions.id),
+  status: text('status').notNull().default('pending'),
+  lease: text('lease'),
+  leaseUntil: integer('lease_until').notNull().default(0),
+  attempts: integer('attempts').notNull().default(0),
+  providerId: text('provider_id'),
+  acceptedAt: integer('accepted_at'),
+  reviewedAt: integer('reviewed_at'),
+  reviewedBy: text('reviewed_by'),
+}, t => [index('course_suggestion_pull_claim').on(t.status, t.leaseUntil)]);
