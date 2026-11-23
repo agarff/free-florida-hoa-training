@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { contributionLessons, limits, type Track } from '../../lib/contribution-policy';
 
 type Target = { lessonId: string; track: Track; edition: string };
@@ -14,6 +14,7 @@ export default function SubmissionForm({ suggestionId, target }: Props) {
   const lesson = contributionLessons.find(l => l.id === lessonId);
   const edition = target?.edition ?? lesson?.[track];
   const comment = Boolean(suggestionId);
+  const lastSubmission = useRef<{ body: string; key: string } | null>(null);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -22,14 +23,19 @@ export default function SubmissionForm({ suggestionId, target }: Props) {
     const payload = comment
       ? { ...fields, kind: 'comment', suggestionId }
       : { ...fields, kind: 'suggestion', lessonId, track, edition, permission: fields.permission === 'on' };
+    const body = JSON.stringify(payload);
+    if (!comment && lastSubmission.current?.body !== body) {
+      lastSubmission.current = { body, key: crypto.randomUUID() };
+    }
     setSending(true);
     setResult(undefined);
     try {
       const response = await fetch('/api/contributions', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: comment ? body : JSON.stringify({ ...payload, submissionKey: lastSubmission.current?.key }),
       });
       const data = await response.json() as { error?: string; message?: string };
       if (!response.ok) throw new Error(data.error ?? 'Unable to submit.');
+      lastSubmission.current = null;
       form.reset();
       setResult({ success: true, message: data.message ?? 'Received and pending moderation.' });
     } catch (error) {
