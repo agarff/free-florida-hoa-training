@@ -4,6 +4,7 @@ import { contributionFailure, ContributionError, isContributionId, jsonInput, pa
 import { statuses } from '../../../../lib/contribution-policy';
 import { listReview, rateLimit, reviewThread } from '../../../../lib/contribution-store';
 import { moderate } from '../../../../lib/contribution-moderation';
+import { pullMailStatus, reconcilePullMail, validReceipt } from '../../../../lib/suggestion-pull-queue';
 import { deliverSuggestionMail, queueSyntheticSuggestionMail, suggestionMailStatus } from '../../../../lib/suggestion-mail';
 
 export const dynamic = 'force-dynamic';
@@ -17,7 +18,7 @@ export async function GET(request: Request) {
     if (id !== null) {
       if (!isContributionId(id)) throw new ContributionError(404, 'The suggestion could not be found.');
       const thread = await reviewThread(id, page, pageIndex(query.get('auditPage')));
-      return reply({ ...thread, notification: await suggestionMailStatus(id) });
+      return reply({ ...thread, notification: await pullMailStatus(id) ?? await suggestionMailStatus(id) });
     }
     const status = query.get('status');
     return reply(await listReview(page, status && (status === 'comments' || Object.hasOwn(statuses, status)) ? status : null));
@@ -31,6 +32,14 @@ export async function POST(request: Request) {
     const user = await getChatGPTUser();
     if (!user || !isInstructorUser(user)) throw new ContributionError(403, 'Owner access required.');
     const input = await jsonInput(request);
+    if (input.action === 'reconcile-pull-mail') {
+      if (!isContributionId(input.id) || (input.resolution !== 'accepted' && input.resolution !== 'closed') ||
+          (input.resolution === 'accepted' && !validReceipt(input.messageId))) {
+        throw new ContributionError(400, 'Choose a valid reconciliation and supply a verified provider receipt for acceptance.');
+      }
+      await reconcilePullMail(input.id, user.userId, input.resolution === 'accepted' ? input.messageId as string : undefined);
+      return reply({ ok: true });
+    }
     if (input.action === 'retry-email') {
       if (!isContributionId(input.id)) throw new ContributionError(400, 'Choose a suggestion to retry.');
       const result = await deliverSuggestionMail(input.id);
