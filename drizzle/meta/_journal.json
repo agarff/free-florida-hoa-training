@@ -36,6 +36,13 @@
       "when": 1795385694070,
       "tag": "0004_owner_suggestion_mail",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1795461617477,
+      "tag": "0005_cloudflare_suggestion_outbox",
+      "breakpoints": true
     }
   ]
 }
