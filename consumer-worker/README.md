@@ -4,8 +4,8 @@ This Worker pulls saved suggestion metadata from one fixed training site and use
 
 ## Owner setup
 
-1. Set the fixed `SITE` constant in `worker.mjs` to the training site's public HTTPS origin. The source copy of Sites uses that same fixed origin in `lib/suggestion-pull-queue.ts`.
-2. Copy `wrangler.example.jsonc` to a private deployment configuration. Substitute the existing owner Worker name, its fixed verified sender, and its existing single-recipient binding restriction. Keep the filled file private.
+1. In the private deployment copy of `worker.mjs`, replace the fixed `SITE` placeholder `https://training.example` with the training site's exact public HTTPS origin, without a path or trailing slash. Use the same fixed origin as Sites in `lib/suggestion-pull-queue.ts`. Keep the placeholder in the public export.
+2. Copy `wrangler.example.jsonc` to a private deployment configuration. Substitute the existing owner Worker name, its fixed verified sender, and its existing single-recipient binding restriction. Keep the filled file private. Include `global_fetch_strictly_public` in the actual Worker compatibility flags so a fetch to the Worker's own zone uses Cloudflare's public entry point. [Cloudflare compatibility flags](https://developers.cloudflare.com/workers/configuration/compatibility-flags/#global-fetch-strictly-public)
 3. With the required approval, configure the same 32 random bytes encoded as 64 lowercase hex characters as secret `SUGGESTION_QUEUE_TOKEN` on both Workers. Set secret `TEST_RECIPIENT` only on the consumer, matching the platform binding restriction. The consumer reads the sender from `NOTIFY_FROM`. Never commit filled settings or secret values.
 4. Set `SUGGESTION_MAIL_TRANSPORT=cloudflare_pull` on Sites and the consumer only when authorized to activate. Sites rejects queue requests if either the transport selection or the queue token is missing. Existing Resend records are separate and are never pulled.
 5. Deploy the consumer to the owner account with the authorized binding and cron. The owner can verify the next poll and provider receipt using one controlled site submission.
