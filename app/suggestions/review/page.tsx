@@ -7,7 +7,8 @@ import { contributionLessons, statuses, type ContributionStatus, type ReviewSugg
 import { listReview, reviewThread } from '../../../lib/contribution-store';
 import { learningReturn } from '../../../lib/login-return';
 import { suggestionMailEnabled, suggestionMailFailureMessage, suggestionMailStatus } from '../../../lib/suggestion-mail';
-import { CommentActions, NotificationAction, SuggestionActions } from './actions';
+import { pullMailStatus } from '../../../lib/suggestion-pull-queue';
+import { CommentActions, NotificationAction, PullReconciliation, SuggestionActions } from './actions';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Owner contribution review', robots: { index: false, follow: false } };
@@ -17,9 +18,10 @@ const root = '/suggestions/review';
 const lessonTitle = (id: string) => contributionLessons.find(lesson => lesson.id === id)?.title ?? id;
 
 async function Thread({ id, page, auditPage }: { id: string; page: number; auditPage: number }) {
-  const [{ suggestion, comments, audit }, notification] = await Promise.all([
-    reviewThread(id, page, auditPage), suggestionMailStatus(id),
+  const [{ suggestion, comments, audit }, external] = await Promise.all([
+    reviewThread(id, page, auditPage), pullMailStatus(id),
   ]);
+  const notification = external ? null : await suggestionMailStatus(id);
   return <>
     <a href={root}>Back to review queue</a>
     <h1>{lessonTitle(suggestion.lessonId)}</h1>
@@ -38,7 +40,14 @@ async function Thread({ id, page, auditPage }: { id: string; page: number; audit
       <p>Owner-only information. Keep it out of all public fields.</p>
       <p>{suggestion.contact || 'No contact email supplied.'}</p>
     </section>
-    <section className="panel">
+    {external ? <section className="panel">
+      <h2>Cloudflare owner notification</h2>
+      <p><strong>{{ pending: 'Pending external processor', claimed: 'Claimed before sending',
+        send_started: 'Send authorized · awaiting receipt', uncertain: 'Needs review · acceptance unknown',
+        accepted: 'Provider accepted', closed: 'Closed by owner · acceptance unconfirmed' }[external.status]}</strong> · Send authorizations: {external.attempts}</p>
+      {external.providerId && <p>Provider reference <code>{external.providerId}</code>. Inbox delivery is unverified.</p>}
+      {external.status === 'uncertain' && <PullReconciliation suggestionId={id} />}
+    </section> : <section className="panel">
       <h2>{notification?.synthetic ? 'Synthetic test notification' : 'Owner notification email'}</h2>
       {!notification ? <p>This suggestion predates email tracking.</p> : <>
         <p><strong>{notification.status === 'sent' ? 'Sent · Provider accepted' : notification.status === 'failed' ? 'Failed' : 'Pending'}</strong> · Attempts: {notification.attempts}</p>
@@ -49,7 +58,7 @@ async function Thread({ id, page, auditPage }: { id: string; page: number; audit
           ? <p>{notification.retryBlocked}</p>
           : <NotificationAction suggestionId={id} />)}
       </>}
-    </section>
+    </section>}
     {!notification?.synthetic && <SuggestionActions suggestion={{
       id: suggestion.id, revision: suggestion.revision, status: suggestion.status as ContributionStatus,
       visible: suggestion.visible, approvedAt: suggestion.approvedAt, approvedText: suggestion.approvedText,
