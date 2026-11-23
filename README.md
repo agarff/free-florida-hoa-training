@@ -23,3 +23,9 @@ Set `INSTRUCTOR_EMAIL` to the verified provider address of your own designated o
 To offer the copy’s source download, place an audited ZIP under `public/downloads/free-florida-hoa-training-source.zip`. Set `PUBLIC_SOURCE_REPOSITORY_URL` only after confirming the HTTPS GitHub repository is public and belongs to your project. The copied site has no connection to the original hosting, repository, learner accounts, or attendance.
 
 See `lessons/` for readable exports, and `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, and `LICENSE-NOTICES.md` for contributions and reuse.
+
+## Optional owner notifications
+
+With an existing authorized Resend sender, set `SUGGESTION_RESEND_API_KEY` (sending-only secret), `SUGGESTION_MAIL_FROM` (verified sender), `SUGGESTION_MAIL_TO` (private recipient matching `INSTRUCTOR_EMAIL`), and `SUGGESTION_MAIL_ORIGIN` (this copy’s HTTPS origin). Set `SUGGESTION_MAIL_ENABLED=true` to enable notifications. Store credentials and private addresses only in local secret files or the hosting runtime secret store. The copy ships with no configured sender or recipient.
+
+The owner review queue offers a private synthetic test and displays whether the provider accepted a notification. Confirm inbox receipt separately. A failed attempt can be retried through owner review within the provider’s deduplication window. Comments do not send notifications.
