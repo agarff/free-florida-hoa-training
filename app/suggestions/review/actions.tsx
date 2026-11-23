@@ -103,3 +103,36 @@ export function CommentActions({ comment }: { comment: ReviewComment }) {
     {error && <p role="alert">{error}</p>}
   </>;
 }
+
+export function NotificationAction({ suggestionId }: { suggestionId?: string }) {
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+  async function send() {
+    setSending(true);
+    setError('');
+    try {
+      const response = await fetch('/api/contributions/moderate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(suggestionId ? { action: 'retry-email', id: suggestionId } : { action: 'test-email' }),
+      });
+      const data = await response.json() as { status?: string; testId?: string; error?: string; message?: string };
+      if (data.testId) {
+        window.location.assign('/suggestions/review?id=' + encodeURIComponent(data.testId));
+      } else if (response.ok || data.status === 'failed') {
+        window.location.reload();
+      } else {
+        throw new Error(data.error ?? data.message ?? 'The email request could not be completed.');
+      }
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'The email request could not be completed.');
+      setSending(false);
+    }
+  }
+  return <>
+    <button className="primary" type="button" disabled={sending} onClick={() => void send()}>
+      {sending ? 'Working…' : suggestionId ? 'Retry owner notification' : 'Queue synthetic test email'}
+    </button>
+    {error && <p role="alert">{error}</p>}
+  </>;
+}
