@@ -3,6 +3,8 @@ declare namespace Cloudflare {
     INSTRUCTOR_EMAIL?: string;
     SITE_ORIGIN?: string;
     MAINTAINER_CONTACT_URL?: string;
+    SUGGESTION_MAIL_TRANSPORT?: string;
+    SUGGESTION_QUEUE_TOKEN?: string;
     SUGGESTION_MAIL_ENABLED?: string;
     SUGGESTION_MAIL_TO?: string;
     SUGGESTION_MAIL_FROM?: string;
